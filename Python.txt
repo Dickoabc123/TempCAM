@@ -1,0 +1,56 @@
+import serial
+import time
+import os
+
+# Open the serial port.
+ser = serial.Serial('COM19', 921600)  # Replace 'COM19' with the port where your Arduino is connected.
+
+# Flush the input buffer.
+ser.reset_input_buffer()
+
+time.sleep(5)
+
+# Send the resolution command.
+
+ser.write(bytearray([0]))
+
+time.sleep(2) # 20 made no difference.
+
+# Send the capture command.
+ser.write(bytearray([0x10]))
+
+# Give the Arduino some time to capture the image.
+time.sleep(40) # was 20
+
+# Create the directory if it doesn't exist
+directory = "H:/My Pictures/ArduCAM"
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
+# The path to save the image
+image_path = os.path.join(directory, "image.jpg")
+
+# Open the file to write the image data.
+with open(image_path, 'wb') as f:
+    # Keep reading data until we find the "ACK IMG\r\n" command.
+    while True:
+        line = ser.readline()
+        if line == b'ACK IMG\r\n':
+            break
+    # Write the rest of the data to the file.
+       # Write the rest of the data to the file.
+    while True:
+        # Wait for data to arrive.
+        while ser.in_waiting == 0:
+            time.sleep(1) # was 0.1
+        # Read a chunk of data.
+        img_data = ser.read(ser.in_waiting)
+        # Write the chunk of data to the file.
+        f.write(img_data)
+        # If no new data has arrived for 2 seconds, assume transmission is complete.
+        time.sleep(0.5)  # Increased delay after reading a chunk of data
+        if ser.in_waiting == 0:
+            break
+
+
+print(f"Image saved at: {image_path}")
